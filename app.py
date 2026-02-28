@@ -2,94 +2,163 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# ==========================
+# ==============================
+# Configuration de la page
+# ==============================
+st.set_page_config(
+    page_title="Sofiatech Dashboard",
+    page_icon="logo.png",
+    layout="wide"
+)
+
+# ==============================
+# Style Sofiatech (Bleu & Orange)
+# ==============================
+st.markdown("""
+<style>
+.stApp {
+    background-color: #f5f7fa;
+}
+
+h1, h2, h3 {
+    color: #0056b3;
+    text-align: center;
+}
+
+div.stButton > button {
+    background-color: #ff7a00;
+    color: white;
+    border-radius: 8px;
+    height: 3em;
+    width: 100%;
+}
+
+div.stButton > button:hover {
+    background-color: #e66900;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ==============================
 # Identifiants autorisés
-# ==========================
-AUTHORIZED_USERNAME = "DarineetNour"
-AUTHORIZED_PASSWORD = "PFA"
+# ==============================
+USERNAME = "DarineetNour"
+PASSWORD = "PFA"
 
-# ==========================
-# Initialiser la session
-# ==========================
+# ==============================
+# Session
+# ==============================
 if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False  # pas connecté par défaut
+    st.session_state.logged_in = False
 
-# ==========================
-# Fenêtre de connexion
-# ==========================
-def show_login():
-    st.title("Connexion au Tableau de bord")
-    username = st.text_input("Nom d'utilisateur")
-    password = st.text_input("Mot de passe", type="password")
-    login_btn = st.button("Se connecter")
+# ==============================
+# Page de connexion
+# ==============================
+def login_page():
+    col1, col2, col3 = st.columns([1,2,1])
 
-    if login_btn:
-        if username == AUTHORIZED_USERNAME and password == AUTHORIZED_PASSWORD:
-            st.session_state.logged_in = True
-        else:
-            st.error("Nom d'utilisateur ou mot de passe incorrect. Vous n'avez pas accès.")
+    with col2:
+        st.image("logo.png", width=200)
+        st.markdown("<h2>Connexion Sofiatech</h2>", unsafe_allow_html=True)
 
-# ==========================
-# Afficher le tableau de bord
-# ==========================
-def show_dashboard():
-    st.title("Tableau de bord des projets - ENSIT JE")
+        user = st.text_input("Nom d'utilisateur")
+        pwd = st.text_input("Mot de passe", type="password")
 
-    # Charger les données Excel
+        if st.button("Se connecter"):
+            if user == USERNAME and pwd == PASSWORD:
+                st.session_state.logged_in = True
+            else:
+                st.error("Accès refusé")
+
+# ==============================
+# Tableau de bord
+# ==============================
+def dashboard():
+    st.title("Tableau de bord des projets")
+
+    # Charger Excel
     data = pd.read_excel("projets.xlsx")
 
+    # ==============================
     # Tableau complet
+    # ==============================
     st.subheader("Liste complète des projets")
-    st.dataframe(data)
+    st.dataframe(data, use_container_width=True)
 
-    # Filtres interactifs
-    st.subheader("Filtrer les projets")
-    status = st.selectbox("Choisir un statut", data["Statut"].unique())
-    filtered_status = data[data["Statut"] == status]
-    st.subheader(f"Projets avec statut : {status}")
-    st.dataframe(filtered_status)
+    # ==============================
+    # Filtres
+    # ==============================
+    col1, col2 = st.columns(2)
 
-    responsable = st.selectbox("Choisir un responsable", data["Responsable"].unique())
-    filtered_responsable = data[data["Responsable"] == responsable]
-    st.subheader(f"Projets du responsable : {responsable}")
-    st.dataframe(filtered_responsable)
+    with col1:
+        statut = st.selectbox("Filtrer par statut", data["Statut"].unique())
+        st.dataframe(data[data["Statut"] == statut])
 
+    with col2:
+        resp = st.selectbox("Filtrer par responsable", data["Responsable"].unique())
+        st.dataframe(data[data["Responsable"] == resp])
+
+    # ==============================
     # KPI
-    st.subheader("Indicateurs de performance (KPI)")
-    st.write("Nombre total de projets :", len(data))
-    st.write("Projets terminés :", len(data[data["Statut"]=="Terminé"]))
-    st.write("Projets en cours :", len(data[data["Statut"]=="En cours"]))
-    st.write("Projets en retard :", len(data[data["Statut"]=="En retard"]))
+    # ==============================
+    st.subheader("Indicateurs de performance")
 
-    # Choix des couleurs
-    st.subheader("Choisir la couleur des graphiques")
-    couleur = st.radio("Couleur du graphique", ("Rouge", "Bordeaux", "Noir", "Blanc"))
-    couleurs_dict = {"Rouge":"red", "Bordeaux":"#800000", "Noir":"black", "Blanc":"white"}
-    couleur_graph = couleurs_dict[couleur]
+    col1, col2, col3, col4 = st.columns(4)
 
+    col1.metric("Total projets", len(data))
+    col2.metric("Terminés", len(data[data["Statut"]=="Terminé"]))
+    col3.metric("En cours", len(data[data["Statut"]=="En cours"]))
+    col4.metric("En retard", len(data[data["Statut"]=="En retard"]))
+
+    # ==============================
+    # Choix couleur graphique
+    # ==============================
+    st.subheader("Couleur des graphiques")
+
+    couleur = st.radio(
+        "Choisir une couleur",
+        ("Rouge", "Bordeaux", "Noir", "Blanc"),
+        horizontal=True
+    )
+
+    couleurs = {
+        "Rouge": "red",
+        "Bordeaux": "#800000",
+        "Noir": "black",
+        "Blanc": "lightgray"
+    }
+
+    couleur_graph = couleurs[couleur]
+
+    # ==============================
     # Graphique barre
-    st.subheader("Graphique : Nombre de projets par statut")
+    # ==============================
+    st.subheader("Nombre de projets par statut")
+
     status_count = data["Statut"].value_counts()
     fig, ax = plt.subplots()
     status_count.plot(kind="bar", color=couleur_graph, ax=ax)
-    ax.set_ylabel("Nombre de projets")
+    ax.set_ylabel("Nombre")
     st.pyplot(fig)
 
+    # ==============================
     # Graphique camembert
-    st.subheader("Graphique : Répartition des projets (camembert)")
+    # ==============================
+    st.subheader("Répartition des projets")
+
     fig2, ax2 = plt.subplots()
     data["Statut"].value_counts().plot(
         kind="pie",
-        autopct='%1.1f%%',
-        colors=[couleur_graph]*len(data["Statut"].unique()),
+        autopct="%1.1f%%",
+        colors=[couleur_graph]*len(status_count),
         ax=ax2
     )
     st.pyplot(fig2)
 
-# ==========================
-# Logique principale
-# ==========================
+# ==============================
+# Navigation
+# ==============================
 if not st.session_state.logged_in:
-    show_login()
+    login_page()
 else:
-    show_dashboard()
+    dashboard()
